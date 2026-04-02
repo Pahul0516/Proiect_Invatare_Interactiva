@@ -1,53 +1,45 @@
-import { Redirect, Route } from 'react-router-dom';
-import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
-import { IonReactRouter } from '@ionic/react-router';
-import Home from './pages/Home';
+import React from "react";
+import {IonApp, IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon} from "@ionic/react";
+import Map from "./components/Map";
+import {moonOutline, sunnyOutline} from "ionicons/icons";
 
-/* Core CSS required for Ionic components to work properly */
-import '@ionic/react/css/core.css';
+const App: React.FC = () => {
+    const toggleTheme = () => {
+        const isDark = document.body.classList.toggle("dark");
 
-/* Basic CSS for apps built with Ionic */
-import '@ionic/react/css/normalize.css';
-import '@ionic/react/css/structure.css';
-import '@ionic/react/css/typography.css';
+        localStorage.setItem("theme", isDark ? "dark" : "light");
+    };
 
-/* Optional CSS utils that can be commented out */
-import '@ionic/react/css/padding.css';
-import '@ionic/react/css/float-elements.css';
-import '@ionic/react/css/text-alignment.css';
-import '@ionic/react/css/text-transformation.css';
-import '@ionic/react/css/flex-utils.css';
-import '@ionic/react/css/display.css';
+    return (
+        <IonApp>
+            <IonPage>
+                <IonHeader>
+                    <IonToolbar>
+                        <IonTitle>Romania Map</IonTitle>
+                        <IonButton
+                            onClick={toggleTheme}
+                            className="theme-toggle"
+                            fill="clear"
+                        >
+                            <IonIcon
+                                icon={
+                                    document.body.classList.contains("dark")
+                                        ? sunnyOutline
+                                        : moonOutline
+                                }
+                            />
+                        </IonButton>
+                    </IonToolbar>
+                </IonHeader>
 
-/**
- * Ionic Dark Mode
- * -----------------------------------------------------
- * For more info, please see:
- * https://ionicframework.com/docs/theming/dark-mode
- */
-
-/* import '@ionic/react/css/palettes/dark.always.css'; */
-/* import '@ionic/react/css/palettes/dark.class.css'; */
-import '@ionic/react/css/palettes/dark.system.css';
-
-/* Theme variables */
-import './theme/variables.css';
-
-setupIonicReact();
-
-const App: React.FC = () => (
-  <IonApp>
-    <IonReactRouter>
-      <IonRouterOutlet>
-        <Route exact path="/home">
-          <Home />
-        </Route>
-        <Route exact path="/">
-          <Redirect to="/home" />
-        </Route>
-      </IonRouterOutlet>
-    </IonReactRouter>
-  </IonApp>
-);
+                <IonContent fullscreen scrollY={false}>
+                    <div style={{ height: "100%", width: "100%", position: "relative" }}>
+                        <Map />
+                    </div>
+                </IonContent>
+            </IonPage>
+        </IonApp>
+    );
+};
 
 export default App;
