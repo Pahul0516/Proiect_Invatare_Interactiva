@@ -5,52 +5,153 @@
     flex-direction: column;
     position: relative;
     background: var(--app-bg);
+    padding-top: 40px; /* HUD height */
 }
 
 .map-container {
     flex: 1;
     min-height: 0;
     transition: all 0.6s ease;
+    overflow: hidden;
 }
 
 .map-container.zoomed {
     opacity: 0.95;
 }
 
+/* ---- Game Navigation Bar ---- */
+.map-game-nav {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: var(--ion-toolbar-background);
+    border-bottom: 1px solid var(--county-stroke);
+    flex-wrap: wrap;
+}
+
+.game-nav-btn {
+    padding: 6px 12px;
+    border: 2px solid var(--county-stroke);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--ion-text-color);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    white-space: nowrap;
+}
+
+.game-nav-btn:hover {
+    border-color: #6366f1;
+    background: rgba(99, 102, 241, 0.08);
+    transform: translateY(-2px);
+}
+
+.game-nav-btn:active {
+    transform: translateY(0) scale(0.97);
+}
+
+.nav-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #ef4444;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: badgePulse 1.5s ease infinite;
+}
+
+@keyframes badgePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+/* ---- Progress Badge ---- */
+.map-progress-badge {
+    position: absolute;
+    top: 80px;
+    right: 8px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 6px 10px;
+    background: var(--ion-toolbar-background);
+    border: 1px solid var(--county-stroke);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.progress-text {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ion-text-color);
+    text-align: center;
+}
+
+.progress-mini-bar {
+    width: 50px;
+    height: 3px;
+    background: rgba(99, 102, 241, 0.15);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-mini-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6366f1, #22c55e);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+}
+
+/* ---- Start Area ---- */
 .map-start-area {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
-    padding: 14px 16px 22px;
+    gap: 8px;
+    padding: 12px 14px 18px;
     background: var(--ion-toolbar-background);
     border-top: 2px solid var(--county-stroke);
     box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
 }
 
 .selected-county-label {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--ion-text-color);
     opacity: 0.85;
     letter-spacing: 0.3px;
+    text-align: center;
 }
 
 .start-button {
     position: relative;
-    padding: 16px 48px;
-    font-size: 18px;
+    padding: 14px 36px;
+    font-size: 16px;
     font-weight: 900;
     color: #fff;
     background: linear-gradient(135deg, #6366f1, #4f46e5);
     border: none;
-    border-radius: 18px;
+    border-radius: 16px;
     cursor: pointer;
     transition: all 0.2s ease;
     box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
     letter-spacing: 0.8px;
     text-transform: uppercase;
     animation: startBtnPulse 2s ease infinite;
+    max-width: 280px;
+    width: 100%;
 }
 
 @keyframes startBtnPulse {
@@ -74,19 +175,35 @@
     animation: none;
 }
 
+.no-lives-warning {
+    font-size: 14px;
+    font-weight: 700;
+    color: #ef4444;
+    padding: 10px 20px;
+    background: rgba(239, 68, 68, 0.08);
+    border: 2px solid rgba(239, 68, 68, 0.2);
+    border-radius: 12px;
+    text-align: center;
+    animation: warningPulse 2s ease infinite;
+}
+
+@keyframes warningPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
 /* ---- Map Weather Badge ---- */
 .map-weather-badge {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    padding: 8px 16px;
+    gap: 10px;
+    padding: 8px 14px;
     background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(99, 102, 241, 0.08));
     border: 2px solid rgba(56, 189, 248, 0.35);
-    border-radius: 16px;
-    max-width: 240px;
+    border-radius: 14px;
+    max-width: 220px;
     width: 100%;
-    margin-bottom: 8px;
     box-shadow: 0 2px 8px rgba(56, 189, 248, 0.1);
     animation: mapWeatherFade 0.3s ease;
 }
@@ -97,7 +214,7 @@
 }
 
 .map-weather-badge .weather-icon {
-    font-size: 28px;
+    font-size: 24px;
     line-height: 1;
 }
 
@@ -108,14 +225,14 @@
 }
 
 .map-weather-badge .weather-temp {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 900;
     color: var(--ion-text-color);
     line-height: 1.1;
 }
 
 .map-weather-badge .weather-desc {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     color: #38bdf8;
     text-transform: capitalize;
@@ -126,4 +243,21 @@
     font-weight: 600;
     color: var(--ion-text-color);
     opacity: 0.55;
+}
+
+/* ---- Mobile ---- */
+@media (max-width: 400px) {
+    .game-nav-btn {
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+    .start-button {
+        padding: 12px 28px;
+        font-size: 14px;
+    }
+    .map-progress-badge {
+        top: 72px;
+        right: 6px;
+        padding: 4px 8px;
+    }
 }

@@ -1,7 +1,12 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { IonButton, IonProgressBar } from "@ionic/react";
 import { useAppContext } from "../context/AppContext";
-import { playCorrectSound, playWrongSound, playStreakSound, playTimerTickSound, playTimeoutSound, playHintSound, playVictorySound, playButtonSound } from "../services/soundService";
+import {
+    playCorrectSound, playWrongSound, playStreakSound,
+    playTimerTickSound, playTimeoutSound, playHintSound,
+    playVictorySound, playButtonSound, playCoinSound,
+    playShieldSound, playFreezeSound
+} from "../services/soundService";
 import AvatarDisplay from "./AvatarDisplay";
 import "./QuizPanel.css";
 
@@ -13,10 +18,20 @@ const QuizPanel: React.FC = () => {
         currentCounty,
         setQuizScore,
         setCountyColor,
+        setCountyStars,
         setPhase,
         addXp,
+        addCoins,
+        loseLife,
         avatarMode,
         setAvatarEmotion,
+        powerUps,
+        usePowerUp,
+        updateBestStreak,
+        addQuestionsAnswered,
+        markUsedShield,
+        markUsedFreeze,
+        triggerAchievementCheck,
     } = useAppContext();
 
     const [currentQ, setCurrentQ] = useState(0);
@@ -35,12 +50,20 @@ const QuizPanel: React.FC = () => {
     const [shakeQuestion, setShakeQuestion] = useState(false);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+    // Power-up state
+    const [shieldActive, setShieldActive] = useState(false);
+    const [shieldUsedThisQ, setShieldUsedThisQ] = useState(false);
+    const [timerFrozen, setTimerFrozen] = useState(false);
+    const [comboMultiplier, setComboMultiplier] = useState(1);
+    const [coinsEarned, setCoinsEarned] = useState(0);
+    const [allTimerAbove10, setAllTimerAbove10] = useState(true);
+
     const question = quizQuestions[currentQ];
     const isLast = currentQ === quizQuestions.length - 1;
 
     // Timer countdown
     useEffect(() => {
-        if (answered) return;
+        if (answered || timerFrozen) return;
         setTimeLeft(TIMER_SECONDS);
         timerRef.current = setInterval(() => {
             setTimeLeft((prev) => {
@@ -55,12 +78,12 @@ const QuizPanel: React.FC = () => {
         return () => {
             if (timerRef.current) clearInterval(timerRef.current);
         };
-    }, [currentQ, answered]);
+    }, [currentQ, answered, timerFrozen]);
 
     // Handle time running out
     useEffect(() => {
         if (timeLeft === 0 && !answered) {
-            handleAnswer(-1); // -1 means timeout
+            handleAnswer(-1);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [timeLeft, answered]);
@@ -70,15 +93,81 @@ const QuizPanel: React.FC = () => {
         setTimeout(() => setFloatingText(null), 1200);
     };
 
+    // ─── Power-up handlers ────────────────────────────────────
+    const handleUseShield = () => {
+        if (answered || shieldUsedThisQ) return;
+        const success = usePowerUp("shield");
+        if (success) {
+            setShieldActive(true);
+            setShieldUsedThisQ(true);
+            playShieldSound();
+            markUsedShield();
+            showFloating("🛡️ Scut activat!");
+        }
+    };
+
+    const handleUseFreeze = () => {
+        if (answered) return;
+        const success = usePowerUp("timeFreeze");
+        if (success) {
+            setTimerFrozen(true);
+            if (timerRef.current) clearInterval(timerRef.current);
+            setTimeLeft((prev) => Math.min(TIMER_SECONDS, prev + 10));
+            playFreezeSound();
+            markUsedFreeze();
+            showFloating("❄️ +10 secunde!");
+            // Unfreeze after a brief moment
+            setTimeout(() => {
+                setTimerFrozen(false);
+            }, 500);
+        }
+    };
+
+    const handleUseSkip = () => {
+        if (answered) return;
+        const success = usePowerUp("skipQuestion");
+        if (success) {
+            playButtonSound();
+            showFloating("🔮 Întrebare sărită!");
+            setScore((s) => s + 1); // Count as correct
+            setAnswered(true);
+            setFeedbackText("Ai sărit peste această întrebare cu power-up!");
+            setAvatarEmotion("happy");
+        }
+    };
+
+    const handleUseExtraHint = () => {
+        if (answered) return;
+        const success = usePowerUp("extraHint");
+        if (success) {
+            // Perform 50/50
+            const wrongIndices = question.options
+                .map((_, i) => i)
+                .filter((i) => i !== question.correctIndex && !hiddenOptions.has(i));
+            const toHide = wrongIndices.sort(() => Math.random() - 0.5).slice(0, 2);
+            setHiddenOptions((prev) => {
+                const next = new Set(prev);
+                toHide.forEach((i) => next.add(i));
+                return next;
+            });
+            playHintSound();
+            showFloating("💡 Indiciu Extra activat!");
+        }
+    };
+
     const handleAnswer = useCallback(
         (optionIndex: number) => {
             if (answered) return;
             if (timerRef.current) clearInterval(timerRef.current);
             setSelectedOption(optionIndex);
-            setAnswered(true);
 
             const isCorrect = optionIndex === question.correctIndex;
             const isTimeout = optionIndex === -1;
+
+            // Track timer for speed achievement
+            if (isCorrect && timeLeft <= 10) {
+                setAllTimerAbove10(false);
+            }
 
             if (isCorrect) {
                 const newStreak = streak + 1;
@@ -87,36 +176,71 @@ const QuizPanel: React.FC = () => {
                 setScore((s) => s + 1);
                 setAvatarEmotion("happy");
 
+                // Combo multiplier
+                const newCombo = newStreak >= 10 ? 3 : newStreak >= 5 ? 2 : 1;
+                setComboMultiplier(newCombo);
+
+                // Earn coins per correct answer
+                const earnedCoins = 5 * newCombo;
+                setCoinsEarned((prev) => prev + earnedCoins);
+                addCoins(earnedCoins);
+
                 if (newStreak >= 3) {
                     playStreakSound();
                 } else {
                     playCorrectSound();
                 }
 
-                if (newStreak >= 5) {
-                    showFloating(`🔥 STREAK x${newStreak}! INCREDIBIL!`);
+                if (newStreak >= 10) {
+                    showFloating(`🔥💥 COMBO x3! +${earnedCoins}💰`);
                     setFeedbackText(
                         avatarMode === "child"
-                            ? `UIMITOR! ${newStreak} corecte la rând! Ești de neoprit! 🔥🔥`
-                            : `Impresionant. Serie de ${newStreak} răspunsuri corecte consecutive.`
+                            ? `INCREDIBIL! ${newStreak} la rând! COMBO x3! +${earnedCoins} monede! 🔥🔥🔥`
+                            : `Excepțional. Serie de ${newStreak}. Multiplicator x3. +${earnedCoins} monede.`
+                    );
+                } else if (newStreak >= 5) {
+                    showFloating(`⚡ COMBO x2! +${earnedCoins}💰`);
+                    setFeedbackText(
+                        avatarMode === "child"
+                            ? `Super! ${newStreak} la rând! COMBO x2! +${earnedCoins} monede! ⚡`
+                            : `Excelent. ${newStreak} consecutive. Multiplicator x2. +${earnedCoins} monede.`
                     );
                 } else if (newStreak >= 3) {
-                    showFloating(`⚡ STREAK x${newStreak}!`);
+                    showFloating(`🔥 Streak x${newStreak}! +${earnedCoins}💰`);
                     setFeedbackText(
                         avatarMode === "child"
-                            ? `Super! ${newStreak} la rând! Continuă tot așa! ⚡`
-                            : `Excelent. ${newStreak} răspunsuri corecte consecutiv.`
+                            ? `Bravo! ${newStreak} la rând! +${earnedCoins} monede! 🔥`
+                            : `Bine. ${newStreak} consecutive. +${earnedCoins} monede.`
                     );
                 } else {
-                    showFloating("✅ +1");
+                    showFloating(`✅ +${earnedCoins}💰`);
                     setFeedbackText(
                         avatarMode === "child"
-                            ? "Bravo! Ai răspuns corect! 🎉"
-                            : "Corect. Foarte bine."
+                            ? `Bravo! Ai răspuns corect! +${earnedCoins} monede! 🎉`
+                            : `Corect. +${earnedCoins} monede.`
                     );
                 }
+
+                setAnswered(true);
             } else {
+                // Shield protection
+                if (shieldActive && !isTimeout) {
+                    setShieldActive(false);
+                    playShieldSound();
+                    showFloating("🛡️ Scut-ul te-a protejat!");
+                    setFeedbackText(
+                        avatarMode === "child"
+                            ? "Fiuu! Scutul te-a salvat! Alege din nou! 🛡️"
+                            : "Scutul a absorbit impactul. Mai ai o șansă."
+                    );
+                    setAvatarEmotion("thinking");
+                    // Don't mark as answered — let them try again
+                    setSelectedOption(null);
+                    return;
+                }
+
                 setStreak(0);
+                setComboMultiplier(1);
                 setAvatarEmotion("sad");
                 setShakeQuestion(true);
                 setTimeout(() => setShakeQuestion(false), 500);
@@ -139,16 +263,18 @@ const QuizPanel: React.FC = () => {
                             : `Incorect. Răspunsul corect: "${correct}".`
                     );
                 }
+
+                setAnswered(true);
             }
         },
-        [answered, question, streak, bestStreak, avatarMode, setAvatarEmotion]
+        [answered, question, streak, bestStreak, avatarMode, setAvatarEmotion,
+            shieldActive, timeLeft, addCoins]
     );
 
     const handleHint = useCallback(() => {
         if (hintsLeft <= 0 || answered) return;
         setHintsLeft((h) => h - 1);
 
-        // Hide 2 wrong options (50/50)
         const wrongIndices = question.options
             .map((_, i) => i)
             .filter((i) => i !== question.correctIndex && !hiddenOptions.has(i));
@@ -168,29 +294,55 @@ const QuizPanel: React.FC = () => {
         if (isLast) {
             playVictorySound();
             setQuizScore(score);
+            updateBestStreak(bestStreak);
+            addQuestionsAnswered(score, quizQuestions.length);
+
+            // Determine color and stars
             let color: "red" | "yellow" | "green";
+            let stars: number;
             if (score === 20) {
                 color = "green";
-                addXp(1);
+                stars = 3;
+                addXp(3);
+                addCoins(50); // Bonus for perfect
+                playCoinSound();
             } else if (score >= 15) {
                 color = "yellow";
+                stars = 2;
+                addXp(1);
+                addCoins(20);
+            } else if (score >= 10) {
+                color = "red";
+                stars = 1;
+                addCoins(10);
             } else {
                 color = "red";
+                stars = 0;
+                loseLife(); // Bad score costs a life
             }
+
             if (currentCounty) {
                 setCountyColor(currentCounty, color);
+                setCountyStars(currentCounty, stars);
             }
             setPhase("result");
             setAvatarEmotion("hello");
+            triggerAchievementCheck();
         } else {
             setCurrentQ((prev) => prev + 1);
             setSelectedOption(null);
             setAnswered(false);
             setFeedbackText("");
             setHiddenOptions(new Set());
+            setShieldActive(false);
+            setShieldUsedThisQ(false);
+            setTimerFrozen(false);
             setAvatarEmotion("thinking");
         }
-    }, [isLast, score, currentCounty, setQuizScore, setCountyColor, setPhase, addXp, setAvatarEmotion]);
+    }, [isLast, score, currentCounty, bestStreak, quizQuestions.length,
+        setQuizScore, setCountyColor, setCountyStars, setPhase,
+        addXp, addCoins, loseLife, setAvatarEmotion,
+        updateBestStreak, addQuestionsAnswered, triggerAchievementCheck]);
 
     if (!question) return null;
 
@@ -207,7 +359,7 @@ const QuizPanel: React.FC = () => {
                 </div>
             )}
 
-            {/* Header with score and streak */}
+            {/* Header with score, streak and combo */}
             <div className="quiz-header">
                 <span className="quiz-counter">
                     {currentQ + 1} / {quizQuestions.length}
@@ -217,6 +369,12 @@ const QuizPanel: React.FC = () => {
                         🔥 x{streak}
                     </span>
                 )}
+                {comboMultiplier > 1 && (
+                    <span className="combo-badge">
+                        ⚡ x{comboMultiplier}
+                    </span>
+                )}
+                <span className="quiz-coins-earned">💰 {coinsEarned}</span>
                 <span className="quiz-score">⭐ {score}</span>
             </div>
 
@@ -224,13 +382,13 @@ const QuizPanel: React.FC = () => {
             <IonProgressBar value={progress} color="primary" className="quiz-progress" />
 
             {/* Timer bar */}
-            <div className={`timer-bar-container ${timerUrgent ? "urgent" : ""}`}>
+            <div className={`timer-bar-container ${timerUrgent ? "urgent" : ""} ${timerFrozen ? "frozen" : ""}`}>
                 <div
                     className="timer-bar-fill"
                     style={{ width: `${timerPercent * 100}%` }}
                 />
                 <span className="timer-text">
-                    {answered ? "—" : `⏱ ${timeLeft}s`}
+                    {answered ? "—" : timerFrozen ? `❄️ ${timeLeft}s` : `⏱ ${timeLeft}s`}
                 </span>
             </div>
 
@@ -238,6 +396,32 @@ const QuizPanel: React.FC = () => {
             <div className={`quiz-question ${shakeQuestion ? "shake" : ""}`}>
                 {question.question}
             </div>
+
+            {/* Power-up buttons */}
+            {!answered && (
+                <div className="quiz-powerups">
+                    {powerUps.shield > 0 && !shieldUsedThisQ && (
+                        <button className={`powerup-btn ${shieldActive ? "active" : ""}`} onClick={handleUseShield}>
+                            🛡️ {powerUps.shield}
+                        </button>
+                    )}
+                    {powerUps.timeFreeze > 0 && (
+                        <button className="powerup-btn" onClick={handleUseFreeze}>
+                            ❄️ {powerUps.timeFreeze}
+                        </button>
+                    )}
+                    {powerUps.extraHint > 0 && (
+                        <button className="powerup-btn" onClick={handleUseExtraHint}>
+                            💡 {powerUps.extraHint}
+                        </button>
+                    )}
+                    {powerUps.skipQuestion > 0 && (
+                        <button className="powerup-btn" onClick={handleUseSkip}>
+                            🔮 {powerUps.skipQuestion}
+                        </button>
+                    )}
+                </div>
+            )}
 
             {/* Options */}
             <div className="quiz-options">

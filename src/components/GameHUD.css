@@ -1,0 +1,135 @@
+.game-hud {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 8px;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.85) 100%);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    flex-wrap: wrap;
+    min-height: 36px;
+}
+
+.hud-item {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.3s ease;
+}
+
+.hud-icon {
+    font-size: 12px;
+    line-height: 1;
+}
+
+.hud-value {
+    font-size: 12px;
+    font-weight: 800;
+    color: #f8fafc;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---- Lives ---- */
+.hud-lives {
+    gap: 1px;
+}
+
+.hud-lives .heart {
+    font-size: 10px;
+    transition: transform 0.2s;
+}
+
+.hud-lives .heart.empty {
+    opacity: 0.3;
+    filter: grayscale(1);
+}
+
+.life-timer {
+    font-size: 9px;
+    font-weight: 600;
+    color: #94a3b8;
+    margin-left: 3px;
+}
+
+/* ---- Coins ---- */
+.hud-coins .hud-value {
+    color: #f59e0b;
+}
+
+/* ---- Level ---- */
+.hud-level {
+    gap: 5px;
+}
+
+.hud-level-badge {
+    font-size: 11px;
+    font-weight: 900;
+    color: #a5b4fc;
+    white-space: nowrap;
+}
+
+.hud-xp-bar {
+    width: 40px;
+    height: 5px;
+    background: rgba(99, 102, 241, 0.2);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.hud-xp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6366f1, #a855f7);
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+
+/* ---- Streak ---- */
+.hud-streak .hud-value {
+    color: #f59e0b;
+}
+
+/* ---- Pulse Animations ---- */
+.pulse-gold {
+    animation: pulseGold 0.6s ease;
+}
+
+@keyframes pulseGold {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.15); box-shadow: 0 0 16px rgba(245, 158, 11, 0.5); }
+    100% { transform: scale(1); }
+}
+
+.pulse-red {
+    animation: pulseRed 0.6s ease;
+}
+
+@keyframes pulseRed {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.1); box-shadow: 0 0 16px rgba(239, 68, 68, 0.5); }
+    100% { transform: scale(1); }
+}
+
+/* ---- Mobile ---- */
+@media (max-width: 360px) {
+    .game-hud {
+        gap: 4px;
+        padding: 4px 6px;
+    }
+    .hud-item {
+        padding: 2px 6px;
+    }
+    .hud-xp-bar {
+        width: 30px;
+    }
+}

@@ -51,14 +51,16 @@ export interface WeatherInfo {
     cityName: string;
 }
 
-function getWeatherEmoji(desc: string): string {
-    const d = desc.toLowerCase();
-    if (d.includes("clear") || d.includes("sunny") || d.includes("senin")) return "☀️";
-    if (d.includes("cloud") || d.includes("nori") || d.includes("overcast")) return "☁️";
-    if (d.includes("rain") || d.includes("ploaie") || d.includes("drizzle")) return "🌧️";
-    if (d.includes("snow") || d.includes("zăpadă") || d.includes("ninsoare")) return "❄️";
-    if (d.includes("thunder") || d.includes("tunet") || d.includes("storm")) return "⛈️";
-    if (d.includes("fog") || d.includes("ceață") || d.includes("mist")) return "🌫️";
+function getWeatherEmoji(code: number): string {
+    if (code === 0) return "☀️";
+    if (code <= 3) return "🌤️";
+    if (code <= 48) return "🌫️";
+    if (code <= 57) return "🌦️";
+    if (code <= 67) return "🌧️";
+    if (code <= 77) return "❄️";
+    if (code <= 82) return "🌧️";
+    if (code <= 86) return "🌨️";
+    if (code >= 95) return "⛈️";
     return "🌤️";
 }
 
@@ -75,26 +77,94 @@ function getWeatherDescription(code: number): string {
     return "variabil";
 }
 
+// Simple in-memory cache to avoid excessive API calls
+const weatherCache: Map<string, { data: WeatherInfo; timestamp: number }> = new Map();
+const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+
 export async function getWeatherForCounty(countyName: string): Promise<WeatherInfo | null> {
     const capital = COUNTY_CAPITALS[countyName];
-    if (!capital) return null;
+    if (!capital) {
+        console.warn(`[Weather] No capital found for county: ${countyName}`);
+        return null;
+    }
+
+    // Check cache first
+    const cached = weatherCache.get(countyName);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        return cached.data;
+    }
 
     try {
         // Using Open-Meteo free API (no key needed)
-        const resp = await fetch(
-            `https://api.open-meteo.com/v1/forecast?latitude=${capital.lat}&longitude=${capital.lon}&current_weather=true`
-        );
-        if (!resp.ok) return null;
+        // Use the "current" parameter (newer API format)
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${capital.lat}&longitude=${capital.lon}&current=temperature_2m,weather_code&timezone=Europe%2FBucharest`;
+        
+        const resp = await fetch(url);
+        if (!resp.ok) {
+            console.warn(`[Weather] API returned ${resp.status} for ${countyName}`);
+            // Fallback: try the older format
+            return await getWeatherFallback(capital, countyName);
+        }
+        
         const data = await resp.json();
-        const cw = data.current_weather;
-        const desc = getWeatherDescription(cw.weathercode);
-
-        return {
-            temp: Math.round(cw.temperature),
+        
+        let temp: number;
+        let weatherCode: number;
+        
+        // Handle both new and old API response formats
+        if (data.current) {
+            temp = Math.round(data.current.temperature_2m);
+            weatherCode = data.current.weather_code;
+        } else if (data.current_weather) {
+            temp = Math.round(data.current_weather.temperature);
+            weatherCode = data.current_weather.weathercode;
+        } else {
+            console.warn(`[Weather] Unexpected API response format for ${countyName}`, data);
+            return null;
+        }
+        
+        const desc = getWeatherDescription(weatherCode);
+        const result: WeatherInfo = {
+            temp,
             description: desc,
-            icon: getWeatherEmoji(desc),
+            icon: getWeatherEmoji(weatherCode),
             cityName: capital.name,
         };
+        
+        // Cache the result
+        weatherCache.set(countyName, { data: result, timestamp: Date.now() });
+        
+        return result;
+    } catch (err) {
+        console.warn(`[Weather] Failed for ${countyName}:`, err);
+        return null;
+    }
+}
+
+// Fallback using the older API format
+async function getWeatherFallback(
+    capital: { name: string; lat: number; lon: number },
+    countyName: string
+): Promise<WeatherInfo | null> {
+    try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${capital.lat}&longitude=${capital.lon}&current_weather=true`;
+        const resp = await fetch(url);
+        if (!resp.ok) return null;
+        
+        const data = await resp.json();
+        if (!data.current_weather) return null;
+        
+        const cw = data.current_weather;
+        const desc = getWeatherDescription(cw.weathercode);
+        const result: WeatherInfo = {
+            temp: Math.round(cw.temperature),
+            description: desc,
+            icon: getWeatherEmoji(cw.weathercode),
+            cityName: capital.name,
+        };
+        
+        weatherCache.set(countyName, { data: result, timestamp: Date.now() });
+        return result;
     } catch {
         return null;
     }

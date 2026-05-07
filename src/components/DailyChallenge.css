@@ -1,0 +1,226 @@
+.daily-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 20px 16px;
+    padding-top: 54px;
+    padding-bottom: 32px;
+    min-height: 100%;
+    background: var(--app-bg);
+    align-items: center;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
+}
+
+.daily-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.daily-title {
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--ion-text-color);
+    margin: 0;
+}
+
+.daily-countdown {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+}
+
+.countdown-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ion-text-color);
+    opacity: 0.5;
+}
+
+.countdown-value {
+    font-size: 16px;
+    font-weight: 900;
+    color: #6366f1;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---- Streak Card ---- */
+.daily-streak-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(239, 68, 68, 0.05));
+    border: 2px solid rgba(245, 158, 11, 0.25);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 300px;
+    animation: dailySlideIn 0.5s ease backwards;
+    box-sizing: border-box;
+}
+
+@keyframes dailySlideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.streak-flames {
+    display: flex;
+    gap: 3px;
+}
+
+.streak-flame {
+    font-size: 20px;
+    animation: flameWave 1s ease-in-out infinite;
+}
+
+.streak-flame:nth-child(odd) { animation-delay: 0s; }
+.streak-flame:nth-child(even) { animation-delay: 0.3s; }
+
+@keyframes flameWave {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-3px) scale(1.1); }
+}
+
+.streak-empty {
+    font-size: 24px;
+}
+
+.streak-info {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.streak-number {
+    font-size: 30px;
+    font-weight: 900;
+    color: #f59e0b;
+}
+
+.streak-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ion-text-color);
+    opacity: 0.7;
+}
+
+.streak-bonus {
+    font-size: 12px;
+    font-weight: 700;
+    color: #22c55e;
+    padding: 3px 12px;
+    background: rgba(34, 197, 94, 0.08);
+    border-radius: 10px;
+}
+
+/* ---- Challenge Card ---- */
+.daily-challenge-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 18px 20px;
+    background: var(--ion-toolbar-background);
+    border: 2px solid #6366f1;
+    border-radius: 18px;
+    width: 100%;
+    max-width: 300px;
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.15);
+    animation: dailySlideIn 0.5s ease 0.15s backwards;
+    box-sizing: border-box;
+}
+
+.daily-challenge-card.completed {
+    border-color: #22c55e;
+    box-shadow: 0 4px 16px rgba(34, 197, 94, 0.15);
+}
+
+.challenge-icon {
+    font-size: 38px;
+    line-height: 1;
+}
+
+.challenge-info {
+    text-align: center;
+}
+
+.challenge-county {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--ion-text-color);
+}
+
+.challenge-subtitle {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ion-text-color);
+    opacity: 0.5;
+}
+
+.challenge-rewards {
+    display: flex;
+    gap: 14px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #f59e0b;
+}
+
+/* ---- Buttons ---- */
+.daily-start-btn {
+    padding: 14px 36px;
+    border: none;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    animation: dailySlideIn 0.5s ease 0.3s backwards;
+    max-width: 280px;
+    width: 100%;
+}
+
+.daily-start-btn:hover:not(:disabled) {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 28px rgba(99, 102, 241, 0.6);
+}
+
+.daily-start-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.daily-completed-msg {
+    font-size: 15px;
+    font-weight: 700;
+    color: #22c55e;
+    text-align: center;
+    animation: dailySlideIn 0.5s ease 0.3s backwards;
+}
+
+.daily-back-btn {
+    padding: 12px 32px;
+    border: 2px solid var(--county-stroke);
+    border-radius: 14px;
+    background: var(--ion-toolbar-background);
+    color: var(--ion-text-color);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 4px;
+}
+
+.daily-back-btn:hover {
+    border-color: #6366f1;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}

@@ -9,6 +9,7 @@ import { geoCentroid } from "d3-geo";
 import { useAppContext } from "../context/AppContext";
 import { getStoryForCounty } from "../services/llmService";
 import { getWeatherForCounty, WeatherInfo } from "../services/weatherService";
+import { playButtonSound } from "../services/soundService";
 
 import romaniaGeo from "../data/romania-counties.json";
 import "./Map.css";
@@ -28,6 +29,7 @@ const RomaniaMap: React.FC = () => {
         currentCounty,
         setCurrentCounty,
         countyColors,
+        countyStars,
         phase,
         setPhase,
         setStoryText,
@@ -43,6 +45,8 @@ const RomaniaMap: React.FC = () => {
         markVisited,
         setShowNewCountyNotification,
         setWeatherInfo,
+        lives,
+        dailyChallenge,
     } = useAppContext();
 
     const [mapWeatherInfo, setMapWeatherInfo] = React.useState<WeatherInfo | null>(null);
@@ -57,7 +61,6 @@ const RomaniaMap: React.FC = () => {
                     setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
                 },
                 () => {
-                    // Default to Bucharest if geolocation fails
                     setUserCoords({ lat: 44.4268, lng: 26.1025 });
                 }
             );
@@ -70,7 +73,6 @@ const RomaniaMap: React.FC = () => {
     useEffect(() => {
         if (!userCoords || geoRef.current.length === 0) return;
 
-        // Simple point-in-polygon check using centroids (approximate)
         let closestCounty = "";
         let minDist = Infinity;
 
@@ -109,7 +111,6 @@ const RomaniaMap: React.FC = () => {
 
     const isZoomed = phase !== "idle" && currentCounty;
 
-    // Compute zoom center
     const zoomCenter = useMemo<[number, number]>(() => {
         if (!isZoomed || geoRef.current.length === 0) return DEFAULT_CENTER;
 
@@ -126,7 +127,9 @@ const RomaniaMap: React.FC = () => {
     const handleStartAdventure = useCallback(async () => {
         const county = currentCounty || detectedCounty;
         if (!county) return;
+        if (lives <= 0) return; // Can't play without lives
 
+        playButtonSound();
         setCurrentCounty(county);
         markVisited(county);
         setIsLoading(true);
@@ -139,16 +142,9 @@ const RomaniaMap: React.FC = () => {
         setIsLoading(false);
         setAvatarEmotion("happy");
     }, [
-        currentCounty,
-        detectedCounty,
-        avatarMode,
-        setCurrentCounty,
-        markVisited,
-        setIsLoading,
-        setAvatarEmotion,
-        setPhase,
-        setStoryText,
-        setWeatherInfo,
+        currentCounty, detectedCounty, avatarMode, lives,
+        setCurrentCounty, markVisited, setIsLoading, setAvatarEmotion,
+        setPhase, setStoryText, setWeatherInfo,
     ]);
 
     const getCountyFill = useCallback(
@@ -161,8 +157,35 @@ const RomaniaMap: React.FC = () => {
         [countyColors]
     );
 
+    const getStarsForCounty = (name: string): number => {
+        return countyStars[name] || 0;
+    };
+
+    const totalCompleted = Object.values(countyColors).filter(Boolean).length;
+
     return (
         <div className="map-wrapper">
+            {/* Game Nav Bar */}
+            <div className="map-game-nav">
+                <button className="game-nav-btn" onClick={() => { playButtonSound(); setPhase("shop"); }}>
+                    🏪 Magazin
+                </button>
+                <button className="game-nav-btn" onClick={() => { playButtonSound(); setPhase("daily"); }}>
+                    📅 Zilnic {!dailyChallenge.completed && <span className="nav-badge">!</span>}
+                </button>
+                <button className="game-nav-btn" onClick={() => { playButtonSound(); setPhase("achievements"); }}>
+                    🏆 Realizări
+                </button>
+            </div>
+
+            {/* Progress Badge */}
+            <div className="map-progress-badge">
+                <span className="progress-text">{totalCompleted}/41 județe</span>
+                <div className="progress-mini-bar">
+                    <div className="progress-mini-fill" style={{ width: `${(totalCompleted / 41) * 100}%` }} />
+                </div>
+            </div>
+
             <div
                 className={`map-container ${isZoomed ? "zoomed" : ""}`}
                 style={{ width: "100%", height: "100%" }}
@@ -184,6 +207,9 @@ const RomaniaMap: React.FC = () => {
                                     geo.properties.NAME_1 || geo.properties.name;
 
                                 const isSelected = activeCounty === name;
+                                const stars = getStarsForCounty(name);
+                                const color = countyColors[name];
+                                const isDaily = dailyChallenge.county === name && !dailyChallenge.completed;
 
                                 return (
                                     <g key={geo.rsmKey}>
@@ -197,8 +223,10 @@ const RomaniaMap: React.FC = () => {
                                                     fill: getCountyFill(name, isSelected),
                                                     stroke: isSelected
                                                         ? "#60a5fa"
-                                                        : "var(--county-stroke)",
-                                                    strokeWidth: isSelected ? 1.2 : 0.6,
+                                                        : isDaily
+                                                            ? "#f59e0b"
+                                                            : "var(--county-stroke)",
+                                                    strokeWidth: isSelected ? 1.2 : isDaily ? 1 : 0.6,
                                                     outline: "none",
                                                     transition: "all 0.4s ease",
                                                     pointerEvents:
@@ -243,6 +271,39 @@ const RomaniaMap: React.FC = () => {
                                                 {name}
                                             </text>
                                         </Marker>
+
+                                        {/* Star rating on completed counties */}
+                                        {stars > 0 && !isZoomed && (
+                                            <Marker coordinates={centroid}>
+                                                <text
+                                                    textAnchor="middle"
+                                                    y={10}
+                                                    style={{
+                                                        fontSize: 6,
+                                                        pointerEvents: "none",
+                                                    }}
+                                                >
+                                                    {"⭐".repeat(stars)}
+                                                </text>
+                                            </Marker>
+                                        )}
+
+                                        {/* Daily challenge marker */}
+                                        {isDaily && !isZoomed && (
+                                            <Marker coordinates={centroid}>
+                                                <text
+                                                    textAnchor="middle"
+                                                    y={-10}
+                                                    style={{
+                                                        fontSize: 8,
+                                                        pointerEvents: "none",
+                                                        animation: "pulse 1.5s ease infinite",
+                                                    }}
+                                                >
+                                                    📅
+                                                </text>
+                                            </Marker>
+                                        )}
 
                                         {/* Avatar marker on user's county */}
                                         {isSelected && detectedCounty === name && (
@@ -293,13 +354,19 @@ const RomaniaMap: React.FC = () => {
                             </div>
                         </div>
                     )}
-                    <button
-                        className="start-button"
-                        onClick={handleStartAdventure}
-                        disabled={!activeCounty || isLoading}
-                    >
-                        {isLoading ? "Se încarcă..." : "▶ Start Aventura"}
-                    </button>
+                    {lives <= 0 ? (
+                        <div className="no-lives-warning">
+                            💔 Nu mai ai vieți! Așteaptă să se regenereze.
+                        </div>
+                    ) : (
+                        <button
+                            className="start-button"
+                            onClick={handleStartAdventure}
+                            disabled={!activeCounty || isLoading}
+                        >
+                            {isLoading ? "Se încarcă..." : "⚔️ START AVENTURA"}
+                        </button>
+                    )}
                 </div>
             )}
         </div>
