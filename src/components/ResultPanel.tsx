@@ -58,10 +58,10 @@ const ResultPanel: React.FC = () => {
     const getResultMessage = () => {
         if (avatarMode === "child") {
             if (color === "green")
-                return `Extraordinar! Ai răspuns perfect la toate întrebările! Ești un adevărat expert al județului ${currentCounty}! Ai primit 1 XP! 🌟`;
+                return `Extraordinar! Ai răspuns perfect la toate întrebările! Ești un adevărat expert al județului ${currentCounty}! Ai primit 1 XP!`;
             if (color === "yellow")
-                return `Foarte bine! Ai răspuns corect la ${quizScore} din 20 de întrebări! Mai încearcă pentru scor perfect! 😊`;
-            return `Nu-i nimic! Ai răspuns corect la ${quizScore} din 20 de întrebări. Poți încerca din nou oricând! 💪`;
+                return `Foarte bine! Ai răspuns corect la ${quizScore} din 20 de întrebări! Mai încearcă pentru scor perfect!`;
+            return `Nu-i nimic! Ai răspuns corect la ${quizScore} din 20 de întrebări. Poți încerca din nou oricând!`;
         } else {
             if (color === "green")
                 return `Excelent. Scor perfect: ${quizScore}/20. Județul ${currentCounty} a fost marcat ca completat. +1 XP.`;
